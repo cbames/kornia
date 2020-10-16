@@ -55,6 +55,41 @@ class TestAngleAxisToQuaternion:
         assert gradcheck(kornia.angle_axis_to_quaternion, (angle_axis,),
                          raise_exception=True)
 
+class TestAngleAxisToRotationMatrix: 
+
+    def test_smoke(self, device):
+        angle_axis = torch.zeros(3)
+        rotation_matrix = kornia.angle_axis_to_rotation_matrix(angle_axis)
+        assert rotation_matrix.shape == (3,3)    
+
+    @pytest.mark.parametrize("batch_size", [1, 2, 5])
+    def test_angle_axis_to_rotation_matrix(batch_size, device):
+        # generate input data
+        angle_axis = torch.rand(batch_size, 3).to(device)
+        eye_batch = create_eye_batch(batch_size, 3).to(device)
+
+        # apply transform
+        rotation_matrix = kornia.angle_axis_to_rotation_matrix(angle_axis)
+
+        rotation_matrix_eye = torch.matmul(
+            rotation_matrix, rotation_matrix.transpose(1, 2))
+        assert_allclose(rotation_matrix_eye, eye_batch)
+
+        # evaluate function gradient
+        angle_axis = tensor_to_gradcheck_var(angle_axis)  # to var
+        assert gradcheck(kornia.angle_axis_to_rotation_matrix, (angle_axis,),
+                         raise_exception=True)
+
+    @pytest.mark.parametrize("batch_size", [1, 2, 5])
+    def test_angle_axis_to_rotation_gradcheck_zero_case(batch_size, device):
+        # generate input data
+        angle_axis = torch.zeros(batch_size, 3).to(device)
+
+        # evaluate function gradient
+        angle_axis = tensor_to_gradcheck_var(angle_axis)  # to var
+        assert gradcheck(kornia.angle_axis_to_rotation_matrix, (angle_axis,),
+                         raise_exception=True)
+
 
 class TestRotationMatrixToQuaternion:
 
@@ -542,23 +577,7 @@ class TestConvertPointsFromHomogeneous:
         assert_allclose(actual, expected)
 
 
-@pytest.mark.parametrize("batch_size", [1, 2, 5])
-def test_angle_axis_to_rotation_matrix(batch_size, device):
-    # generate input data
-    angle_axis = torch.rand(batch_size, 3).to(device)
-    eye_batch = create_eye_batch(batch_size, 3).to(device)
 
-    # apply transform
-    rotation_matrix = kornia.angle_axis_to_rotation_matrix(angle_axis)
-
-    rotation_matrix_eye = torch.matmul(
-        rotation_matrix, rotation_matrix.transpose(1, 2))
-    assert_allclose(rotation_matrix_eye, eye_batch)
-
-    # evaluate function gradient
-    angle_axis = tensor_to_gradcheck_var(angle_axis)  # to var
-    assert gradcheck(kornia.angle_axis_to_rotation_matrix, (angle_axis,),
-                     raise_exception=True)
 
 
 '''@pytest.mark.parametrize("batch_size", [1, 2, 5])
